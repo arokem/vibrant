@@ -143,7 +143,7 @@ fn sample_material(uv: vec3<f32>) -> Material {
     let scattering = reduced_scattering / (1.0 - HDRI_SETTINGS.anisotropy);
 
     let extinction = absorption + scattering;
-    let ior = select(1.0, properties.x / properties.y, properties.y > 0.0);
+    let ior = average_ior(properties);
 
     return Material(absorption, scattering, extinction, ior);
 }

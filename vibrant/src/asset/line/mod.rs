@@ -49,8 +49,6 @@ pub struct LineSettings {
     pub colormap: ColormapSelection,
     pub crop_start: f32,
     pub crop_end: f32,
-    /// Whether the slicing / clipping planes cut this line. Only takes
-    /// effect while `Settings::line_crop` (the master switch) is also on.
     pub crop: bool,
 }
 
@@ -183,7 +181,7 @@ impl LineBuffer {
                 colormap: ColormapSelection::Viridis,
                 crop_start: 0.0,
                 crop_end: 1.0,
-                crop: false,
+                crop: true,
             })
             .collect();
 

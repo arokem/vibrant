@@ -566,6 +566,14 @@ fn unpack_rgb(src: vec4<f32>) -> vec3<f32> {
     return src.rgb * scale;
 }
 
+// PROPERTIES holds (Σ ior·w, Σ w, _) with w the material density. The epsilon
+// fades to vacuum (ior 1) as density vanishes instead of amplifying 8-bit noise.
+const AVERAGE_IOR_EPSILON: f32 = 1e-2;
+
+fn average_ior(properties: vec3<f32>) -> f32 {
+    return (properties.x + AVERAGE_IOR_EPSILON) / (properties.y + AVERAGE_IOR_EPSILON);
+}
+
 fn sign_not_zero(v: f32) -> f32 {
   return select(-1.0, 1.0, v >= 0.0);
 }
