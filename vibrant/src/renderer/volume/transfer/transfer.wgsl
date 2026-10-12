@@ -28,7 +28,7 @@ struct Material {
 struct MaskSettings {
     visible: u32,
     invert: u32,
-    binary: u32,
+    sdf: u32,
     offset: f32,
     width: f32
 };
@@ -87,7 +87,6 @@ fn main(@builtin(global_invocation_id) voxel: vec3<u32>) {
 
     var absorption = material.absorption;
     var scattering = material.scattering;
-    var properties = vec3<f32>(material.ior, 1.0, 0.0);
 
     // Recolor by the colormap, same asymmetric hue trick as before (absorption
     // takes the inverted hue so it doesn't cancel out the scattered color).
@@ -100,7 +99,7 @@ fn main(@builtin(global_invocation_id) voxel: vec3<u32>) {
     }
 
     // Volume opacity: scales this fraction's contribution to the medium after
-    // the transfer function (leaves refraction / ior in `properties` alone).
+    // the transfer function (ior is density-weighted, so its average is unchanged).
     let opacity = saturate(MATERIAL.opacity);
     absorption *= opacity;
     scattering *= opacity;
@@ -108,7 +107,10 @@ fn main(@builtin(global_invocation_id) voxel: vec3<u32>) {
     let attenuation = get_mask(uv) * voxel_distance_transform;
     absorption *= attenuation;
     scattering *= attenuation;
-    properties *= attenuation;
+
+    // Weight ior by density so empty materials (air) don't dilute the average.
+    let density = brightness(absorption + scattering);
+    var properties = vec3<f32>(material.ior, 1.0, 0.0) * density;
 
     absorption = unpack_rgb(unpack4x8unorm(textureLoad(ABSORPTION, voxel).x)) + absorption;
     scattering = unpack_rgb(unpack4x8unorm(textureLoad(SCATTERING, voxel).x)) + scattering;
@@ -170,16 +172,14 @@ fn sample_material(t: f32) -> MaterialSample {
 fn get_mask(uv: vec3<f32>) -> f32 {
     var mask = textureSampleLevel(MASK, SAMPLER, uv, 0.0).x;
 
-    if (bool(MASK_SETTINGS.binary)) {
-        mask = select(mask, 1.0 - mask, bool(MASK_SETTINGS.invert));
-        mask = saturate(mask + MASK_SETTINGS.offset);
-    } else {
+    if (bool(MASK_SETTINGS.sdf)) {
         let offset = 0.1 * MASK_SETTINGS.offset;
         let width = 0.01 * MASK_SETTINGS.width;
 
-        mask = select(1.0, -1.0, bool(MASK_SETTINGS.invert)) * mask;
-        mask = smoothstep(offset - width, offset + width, mask);
+        mask = 1.0 - smoothstep(offset - width, offset + width, mask);
     }
+
+    mask = select(mask, 1.0 - mask, bool(MASK_SETTINGS.invert));
 
     mask = select(1.0, mask, bool(MASK_SETTINGS.visible));
     mask = select(1.0, mask, bool(MATERIAL.masked));

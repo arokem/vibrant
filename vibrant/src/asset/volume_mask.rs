@@ -13,7 +13,7 @@ use crate::{file::VolumeFile, gpu::Gpu};
 pub struct VolumeMaskSettings {
     pub name: String,
     pub visible: bool,
-    pub binary: bool,
+    pub sdf: bool,
     pub inverted: bool,
     pub offset: f32,
     pub width: f32,
@@ -24,7 +24,7 @@ impl VolumeMaskSettings {
         VolumeMaskSettingsBuffer {
             visible: self.visible as u32,
             invert: self.inverted as u32,
-            binary: self.binary as u32,
+            sdf: self.sdf as u32,
             offset: self.offset,
             width: self.width,
         }
@@ -36,7 +36,7 @@ impl VolumeMaskSettings {
 pub struct VolumeMaskSettingsBuffer {
     visible: u32,
     invert: u32,
-    binary: u32,
+    sdf: u32,
     offset: f32,
     width: f32,
 }
@@ -82,7 +82,7 @@ impl VolumeMaskBuffer {
             offset: 0.0,
             width: 0.02,
             inverted: false,
-            binary: file.is_binary(),
+            sdf: file.is_signed(),
         };
 
         Self::from_texture_settings(gpu, texture, settings)
@@ -172,7 +172,7 @@ impl VolumeMaskBuffer {
             offset: 0.0,
             width: 0.00,
             inverted: false,
-            binary: true,
+            sdf: false,
         };
 
         Self::from_texture_settings(gpu, texture, settings)

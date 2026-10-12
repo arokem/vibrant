@@ -99,8 +99,8 @@ impl VolumeFile {
         self.size
     }
 
-    pub fn is_binary(&self) -> bool {
-        self.data.iter().all(|&x| x == 0.0 || x == 1.0)
+    pub fn is_signed(&self) -> bool {
+        self.data.iter().any(|&x| x < 0.0)
     }
 
     fn to_f32<T: DataElement + ToPrimitive>(
