@@ -79,5 +79,5 @@ fn visit_voxel(voxel: vec3<i32>, index: u32, v0: Vertex, v1: Vertex) {
 }
 
 fn encode_density(density: f32) -> u32 {
-    return (max(u32(density * U12_MAX_f32), 1u) << U16_SHIFT) + 1;
+    return (u32(round(density * U12_MAX_f32)) << U16_SHIFT) + 1;
 }

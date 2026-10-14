@@ -9,6 +9,7 @@ use crate::{
     asset::{
         line::{occupancy::OccupancyBuffer, LineBuffer},
         texture::{MipTexture3D, R32Float},
+        tractography::Tractography,
         volume::PhysicalVolume,
     },
     gpu::Gpu,
@@ -32,6 +33,7 @@ impl LineDepositPipeline {
                 &gpu.pipeline_layout(&[
                     &MipTexture3D::<R32Float>::layout_write(gpu),
                     &OccupancyBuffer::layout_read(gpu),
+                    &Tractography::layout(gpu),
                 ]),
                 &gpu.shader(include_str!("deposit.wgsl")),
             ),
@@ -43,7 +45,13 @@ impl LineDepositPipeline {
         }
     }
 
-    pub fn dispatch(&self, cmd: &mut CommandEncoder, volume: &PhysicalVolume, line: &LineBuffer) {
+    pub fn dispatch(
+        &self,
+        cmd: &mut CommandEncoder,
+        volume: &PhysicalVolume,
+        line: &LineBuffer,
+        tractography: &Tractography,
+    ) {
         let n = volume.size().add(3).div(4);
 
         let mut pass = cmd.begin_compute_pass(&ComputePassDescriptor {
@@ -54,6 +62,7 @@ impl LineDepositPipeline {
         pass.set_pipeline(&self.deposit);
         pass.set_bind_group(0, volume.line_extinction().binding_write(), &[]);
         pass.set_bind_group(1, line.occupancy().binding(), &[]);
+        pass.set_bind_group(2, tractography.binding(), &[]);
         pass.dispatch_workgroups(n.x, n.y, n.z);
 
         drop(pass);

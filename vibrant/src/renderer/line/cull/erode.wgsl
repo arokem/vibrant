@@ -18,5 +18,5 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
             textureLoad(DENSITY, voxel + vec3<i32>(-1, 0, 0), 0).x);
     }
 
-    textureStore(ERODE, voxel, vec4<f32>(density));
+    textureStore(ERODE, voxel, vec4<f32>(saturate(density)));
 }
