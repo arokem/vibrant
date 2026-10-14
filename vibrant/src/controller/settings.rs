@@ -48,6 +48,7 @@ pub struct Settings {
     pub height: u32,
     pub volume: u32,
     pub index_buffer_size: u32,
+    /// Streamline tube radius, in millimetres.
     pub radius: f32,
     pub lighting: f32,
     pub ambient_light: f32,
@@ -59,6 +60,12 @@ pub struct Settings {
     pub line_specular: f32,
     /// Whether the slicing / clipping planes cull tractography lines.
     pub line_crop: bool,
+    /// Optical-depth scale of the line near-field occlusion (the first probe
+    /// cell the cascade skips); 0 disables it.
+    pub line_occlusion: f32,
+    /// Soft cap on line extinction (per mm): dense bundles saturate towards
+    /// it so shading never goes fully black.
+    pub line_extinction_max: f32,
     pub level: f32,
     pub smoothing: f32,
     pub culling: bool,
@@ -100,16 +107,18 @@ impl Settings {
             height: 1080,
             volume: 128,
             index_buffer_size: 64,
-            radius: 0.15,
+            radius: 0.2,
             lighting: 0.85,
             ambient_light: 0.5,
             direct_light: 1.0,
             tangent_color: 1.0,
             shadows: 0.0,
             alpha: 1.0,
-            line_roughness: 0.5,
+            line_roughness: 0.05,
             line_specular: 0.5,
             line_crop: true,
+            line_occlusion: 1.0,
+            line_extinction_max: 1.0,
             level: 0.0,
             smoothing: 1.0,
             culling: true,

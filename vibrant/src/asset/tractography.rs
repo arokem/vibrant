@@ -30,6 +30,10 @@ pub struct TractographySettings {
     pub crop_end: f32,
     pub line_roughness: f32,
     pub line_specular: f32,
+    pub line_occlusion: f32,
+    pub line_extinction_max: f32,
+    /// Line extinction per unit volume fraction, per mm: 1 / (2 r).
+    pub line_extinction: f32,
 }
 
 pub struct Tractography {
@@ -59,7 +63,7 @@ impl Tractography {
         Self { buffer, binding }
     }
 
-    pub fn update(&self, gpu: &Gpu, controller: &Controller) {
+    pub fn update(&self, gpu: &Gpu, controller: &Controller, mm_per_voxel: f32) {
         let s = controller.settings();
 
         let settings = TractographySettings {
@@ -67,7 +71,7 @@ impl Tractography {
             culling: s.culling as u32,
             render_mode: s.render_mode as u32,
             line_crop: s.line_crop as u32,
-            radius: s.radius,
+            radius: s.radius / mm_per_voxel,
             alpha: s.alpha,
             ambient_light: s.ambient_light,
             direct_light: s.direct_light,
@@ -76,6 +80,11 @@ impl Tractography {
             crop_end: s.crop_end,
             line_roughness: s.line_roughness,
             line_specular: s.line_specular,
+            line_occlusion: s.line_occlusion,
+            line_extinction_max: s.line_extinction_max.max(1e-6),
+            // Randomly oriented cylinders: mean projected area is a quarter of
+            // the surface (Cauchy), so σ = f / (2r).
+            line_extinction: 1.0 / (2.0 * s.radius.max(1e-3)),
         };
 
         gpu.queue()

@@ -2,7 +2,7 @@ use egui::{ComboBox, Grid, Ui};
 use itertools::Itertools;
 
 use crate::{
-    asset::{hdri::HdriBuffer, line::LineBuffer},
+    asset::hdri::HdriBuffer,
     controller::{
         camera::Camera,
         components::UIComponents,
@@ -88,7 +88,6 @@ impl RenderingWidget {
         &mut self,
         ui: &mut Ui,
         hdri: &mut HdriBuffer,
-        lines: Option<&LineBuffer>,
         camera: &mut Camera,
         settings: &mut Settings,
         // `Some(limit)` = HDR available + the max peak the display can drive now.
@@ -263,23 +262,36 @@ impl RenderingWidget {
                             });
                         ui.end_row();
 
-                        // `settings.radius` is in voxels of the `settings.volume` grid,
-                        // which spans the tractogram's largest extent; scale by the mm
-                        // width of one such voxel so the slider reads in millimetres.
-                        if let Some(mm_per_unit) =
-                            lines.filter(|_| settings.volume > 0).map(|lines| {
-                                lines.bounds().scale().max_element() / settings.volume as f32
-                            })
-                        {
-                            ui.label("Tract Radius").on_hover_text(
-                                "Rendered radius of each streamline, in millimetres.",
-                            );
-                            let mut radius_mm = settings.radius * mm_per_unit;
-                            if ui.slider(&mut radius_mm, 0.0..=2.0).track(self).changed() {
-                                settings.radius = radius_mm / mm_per_unit;
-                            }
-                            ui.end_row();
-                        }
+                        ui.label("Tract Radius")
+                            .on_hover_text("Rendered radius of each streamline, in millimetres.");
+                        ui.slider(&mut settings.radius, 0.0..=2.0).track(self);
+                        ui.end_row();
+
+                        ui.label("Specular").on_hover_text(
+                            "Strength of mirror-like highlights on the bundles. \
+                             0 = matte, 1 = glossy.",
+                        );
+                        ui.slider(&mut settings.line_specular, 0.0..=1.0)
+                            .track(self);
+                        ui.end_row();
+
+                        ui.label("Shadow Depth").on_hover_text(
+                            "How dark the shadows inside dense bundles can get. \
+                             Lower it to see deeper into the tractogram; \
+                             0 = bundles cast no shadows.",
+                        );
+                        ui.slider(&mut settings.line_extinction_max, 0.0..=4.0)
+                            .track(self);
+                        ui.end_row();
+
+                        ui.label("Shadow Detail").on_hover_text(
+                            "Darken bundles where neighbouring tracts or volume sit \
+                             right next to them, bringing out fine detail. \
+                             0 = off.",
+                        );
+                        ui.slider(&mut settings.line_occlusion, 0.0..=4.0)
+                            .track(self);
+                        ui.end_row();
                     });
             },
         );

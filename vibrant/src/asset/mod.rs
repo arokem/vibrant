@@ -182,7 +182,10 @@ impl Asset {
         self.hdri.settings_mut().rotation = controller.light().yaw() / (2.0 * PI);
         self.hdri.update_settings(gpu);
         self.crop.update_settings(gpu);
-        self.tractography.update(gpu, controller);
+        let mm_per_voxel = self.line.as_ref().map_or(1.0, |line| {
+            line.bounds().scale().max_element() / controller.settings().volume.max(1) as f32
+        });
+        self.tractography.update(gpu, controller, mm_per_voxel);
 
         if let Some(line) = &self.line {
             line.update_settings(gpu);
@@ -253,10 +256,10 @@ impl Asset {
 
         // Scale the reference volume so its longest axis hits the requested probe
         // count, keeping aspect ratio.
-        let radiance = |size: UVec3| {
+        let radiance = |size: UVec3, volume: &PhysicalVolume| {
             let scale = lightmap_resolution as f32 / size.max_element().max(1) as f32;
             let dims = (size.as_vec3() * scale).round().as_uvec3().max(UVec3::ONE);
-            GaussianRadianceBuffer::new(gpu, dims)
+            GaussianRadianceBuffer::new(gpu, dims, volume)
         };
 
         let key = reference
@@ -265,8 +268,9 @@ impl Asset {
         if key != self.physical_key {
             match reference {
                 Some((size, transform)) => {
-                    self.physical_volume = Some(PhysicalVolume::new(gpu, size, transform));
-                    self.radiance = Some(radiance(size));
+                    let volume = PhysicalVolume::new(gpu, size, transform);
+                    self.radiance = Some(radiance(size, &volume));
+                    self.physical_volume = Some(volume);
                 }
                 None => {
                     self.physical_volume = None;
@@ -290,7 +294,10 @@ impl Asset {
 
         match (split, reference) {
             (true, Some((size, _))) if self.radiance_lines.is_none() => {
-                self.radiance_lines = Some(radiance(size));
+                self.radiance_lines = self
+                    .physical_volume
+                    .as_ref()
+                    .map(|volume| radiance(size, volume));
             }
             (false, _) => self.radiance_lines = None,
             _ => {}

@@ -90,7 +90,12 @@ fn bench_pipeline(c: &mut Criterion) {
     });
 
     group.bench_function("line/deposit", |t| {
-        t.iter(|| b.time_pass(|cmd| b.line_deposit.dispatch(cmd, b.pv(), b.line())))
+        t.iter(|| {
+            b.time_pass(|cmd| {
+                b.line_deposit
+                    .dispatch(cmd, b.pv(), b.line(), &b.asset.tractography)
+            })
+        })
     });
 
     // --- Radiance cascade (see benches/cascade.rs for the per-level breakdown) ---

@@ -217,7 +217,8 @@ impl Bench {
             .begin(cmd, &asset.volumes, &asset.masks, pv, &asset.crop);
         self.volume_transfer.finalize(cmd, pv);
         self.gradient.dispatch(cmd, pv);
-        self.line_deposit.dispatch(cmd, pv, line);
+        self.line_deposit
+            .dispatch(cmd, pv, line, &asset.tractography);
     }
 
     /// One-time population run from `setup`: scene build + a full radiance solve

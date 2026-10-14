@@ -76,7 +76,7 @@ impl LineRenderer {
             return;
         };
 
-        self.deposit.dispatch(cmd, volume, line);
+        self.deposit.dispatch(cmd, volume, line, &asset.tractography);
     }
 
     pub fn render(

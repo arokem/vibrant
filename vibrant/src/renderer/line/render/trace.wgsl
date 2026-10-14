@@ -21,6 +21,11 @@ const VMM_SIZE : u32 = #VMM_SIZE;
 @group(2) @binding(0) var RADIANCE: texture_3d<f32>;
 @group(2) @binding(1) var GAUSSIAN: texture_3d<f32>;
 @group(2) @binding(2) var VMM_SAMPLER: sampler;
+@group(2) @binding(3) var EXTINCTION: texture_3d<f32>;
+@group(2) @binding(4) var LINE_EXTINCTION: texture_3d<f32>;
+@group(2) @binding(5) var EXTINCTION_SAMPLER: sampler;
+@group(2) @binding(6) var<uniform> VOLUME_TRANSFORM: mat4x4<f32>;
+@group(2) @binding(7) var<uniform> CASCADE_OPTS: CascadeOpts;
 
 @group(3) @binding(0) var<uniform> TRACTOGRAPHY: Tractography;
 
@@ -232,7 +237,7 @@ fn shade(
         probe_p, normal_smooth, view, albedo, roughness, f0,
         TRACTOGRAPHY.ambient_light, TRACTOGRAPHY.direct_light,
         VMM_SIZE
-    );
+    ) * near_transmission(probe_p, normal_smooth);
 
     // Combined: opaque. Overlay (render_mode == 1): honor per-bundle opacity.
     let alpha = select(
@@ -242,4 +247,24 @@ fn shade(
     );
 
     return vec4<f32>(radiance, alpha);
+}
+
+// Cascade 0 starts tracing one probe cell out; cover that gap with a single
+// cone sample half a cell along the normal, footprint one cell.
+fn near_transmission(p: vec3<f32>, normal: vec3<f32>) -> vec3<f32> {
+    let probes = max(floor(vec3<f32>(textureDimensions(GAUSSIAN)) / vec3<f32>(4.0, 4.0, 2.0)), vec3<f32>(1.0));
+    let uv = clamp(p + 0.5 * normal / probes, vec3<f32>(0.0), vec3<f32>(1.0));
+    let cell = 1.0 / (length(VOLUME_TRANSFORM[0].xyz) * probes.x); // mm
+
+    var depth = vec3<f32>(0.0);
+    if (CASCADE_OPTS.include_volume != 0u) {
+        let mip = log2(f32(textureDimensions(EXTINCTION).x) / probes.x);
+        depth += cell * unpack_rgb(textureSampleLevel(EXTINCTION, EXTINCTION_SAMPLER, uv, mip));
+    }
+    if (CASCADE_OPTS.include_lines != 0u) {
+        let mip = log2(f32(textureDimensions(LINE_EXTINCTION).x) / probes.x);
+        depth += line_falloff_depth(cell) * textureSampleLevel(LINE_EXTINCTION, EXTINCTION_SAMPLER, uv, mip).x;
+    }
+
+    return exp(-TRACTOGRAPHY.line_occlusion * depth);
 }

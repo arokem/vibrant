@@ -127,7 +127,6 @@ impl egui_dock::TabViewer for ControllerTabViewer<'_> {
                 self.rendering_widget.show(
                     ui,
                     &mut self.asset.hdri,
-                    self.asset.line.as_ref(),
                     self.camera,
                     self.settings,
                     self.hdr_headroom_limit,

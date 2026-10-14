@@ -6,7 +6,7 @@ use wgpu::{
     *,
 };
 
-use crate::gpu::Gpu;
+use crate::{asset::volume::PhysicalVolume, gpu::Gpu};
 
 pub struct GaussianRadianceBuffer {
     vmm: Texture,
@@ -34,7 +34,7 @@ impl GaussianRadianceBuffer {
     // One row per cascade level.
     pub const EM_HISTOGRAM_ROWS: u32 = Self::LEVELS;
 
-    pub fn new(gpu: &Gpu, size: UVec3) -> Self {
+    pub fn new(gpu: &Gpu, size: UVec3, volume: &PhysicalVolume) -> Self {
         let label = Some(type_name::<Self>());
 
         let size = size.max(UVec3::splat(2u32.pow(Self::LEVELS)));
@@ -130,6 +130,39 @@ impl GaussianRadianceBuffer {
                 BindGroupEntry {
                     binding: 2,
                     resource: BindingResource::Sampler(&sampler),
+                },
+                BindGroupEntry {
+                    binding: 3,
+                    resource: BindingResource::TextureView(&volume.extinction().create_view(
+                        &TextureViewDescriptor {
+                            label,
+                            ..Default::default()
+                        },
+                    )),
+                },
+                BindGroupEntry {
+                    binding: 4,
+                    resource: BindingResource::TextureView(
+                        &volume
+                            .line_extinction()
+                            .texture()
+                            .create_view(&TextureViewDescriptor {
+                                label,
+                                ..Default::default()
+                            }),
+                    ),
+                },
+                BindGroupEntry {
+                    binding: 5,
+                    resource: BindingResource::Sampler(volume.sampler()),
+                },
+                BindGroupEntry {
+                    binding: 6,
+                    resource: volume.transform().as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 7,
+                    resource: cascade_opts.as_entire_binding(),
                 },
             ],
         });
@@ -310,6 +343,54 @@ impl GaussianRadianceBuffer {
                         binding: 2,
                         visibility,
                         ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    // Near-field occluders: EXTINCTION, LINE_EXTINCTION, their
+                    // sampler, the volume TRANSFORM and CASCADE_OPTS.
+                    BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility,
+                        ty: BindingType::Texture {
+                            sample_type: TextureSampleType::Float { filterable: true },
+                            view_dimension: TextureViewDimension::D3,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility,
+                        ty: BindingType::Texture {
+                            sample_type: TextureSampleType::Float { filterable: true },
+                            view_dimension: TextureViewDimension::D3,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: 5,
+                        visibility,
+                        ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: 6,
+                        visibility,
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    BindGroupLayoutEntry {
+                        binding: 7,
+                        visibility,
+                        ty: BindingType::Buffer {
+                            ty: BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
                         count: None,
                     },
                 ],

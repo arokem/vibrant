@@ -30,6 +30,7 @@ pub struct PhysicalVolume {
     pong: Texture,
     transform: Buffer,
     transform_inverse: Buffer,
+    sampler: Sampler,
     binding_read: BindGroup,
     binding_transfer: BindGroup,
     binding_copy: BindGroup,
@@ -389,6 +390,7 @@ impl PhysicalVolume {
             line_extinction,
             transform,
             transform_inverse,
+            sampler,
             ping,
             pong,
             binding_read,
@@ -408,6 +410,18 @@ impl PhysicalVolume {
 
     pub fn binding_read(&self) -> &BindGroup {
         &self.binding_read
+    }
+
+    pub fn extinction(&self) -> &Texture {
+        &self.extinction
+    }
+
+    pub fn sampler(&self) -> &Sampler {
+        &self.sampler
+    }
+
+    pub fn transform(&self) -> &Buffer {
+        &self.transform
     }
 
     /// The neutral line-density texture: `binding_write()` (mip 0) is the line
