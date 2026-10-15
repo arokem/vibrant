@@ -11,14 +11,13 @@ use crate::{controller::Controller, gpu::Gpu};
 
 /// Tractography-only render parameters, pulled out of the `Environment` uniform.
 /// Uploaded straight from `controller.settings()` each frame; the line passes
-/// (`crop`, `occupancy`, `cull`, `populate`, `render`) bind it instead of the
+/// (`crop`, `occupancy`, `populate`, `render`) bind it instead of the
 /// camera-oriented `Environment`.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 pub struct TractographySettings {
     /// Voxel-grid resolution the acceleration structure is built at.
     pub volume: u32,
-    pub culling: u32,
     pub render_mode: u32,
     pub line_crop: u32,
     pub radius: f32,
@@ -68,7 +67,6 @@ impl Tractography {
 
         let settings = TractographySettings {
             volume: s.volume,
-            culling: s.culling as u32,
             render_mode: s.render_mode as u32,
             line_crop: s.line_crop as u32,
             radius: s.radius / mm_per_voxel,

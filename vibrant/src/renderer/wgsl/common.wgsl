@@ -2,7 +2,6 @@
 // line passes; field order must match `TractographySettings`.
 struct Tractography {
     volume: u32,
-    culling: u32,
     // 0 = Combined, 1 = Overlay.
     render_mode: u32,
     // Whether the slicing / clipping planes cull tractography lines.
@@ -141,6 +140,10 @@ const BLOCK_BITS: u32 = 3u;
 const BLOCK_SIZE: u32 = 8u;
 const BLOCK_SIZE_2: u32 = BLOCK_SIZE * BLOCK_SIZE;
 const BLOCK_SIZE_3: u32 = BLOCK_SIZE_2 * BLOCK_SIZE;
+
+fn in_volume(voxel: vec3<i32>, dim: vec3<u32>) -> bool {
+    return all(voxel >= vec3<i32>(0)) && all(vec3<u32>(voxel) < dim);
+}
 
 fn block_index(voxel: vec3<u32>, dim: vec3<u32>) -> u32 {
     // Number of blocks along each axis

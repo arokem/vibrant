@@ -49,19 +49,27 @@ fn main(@builtin(local_invocation_index) local: u32) {
 }
 
 fn visit_voxel_line(voxel: vec3<i32>, index: u32, v0: Vertex, v1: Vertex, length: f32) {
-    let idx = block_index(vec3<u32>(voxel), vec3<u32>(TRACTOGRAPHY.volume));
+    let dim = vec3<u32>(TRACTOGRAPHY.volume);
+
+    if (!in_volume(voxel, dim)) { return; }
+
+    let idx = block_index(vec3<u32>(voxel), dim);
     let density = DENSITY_MULTIPLIER * length;
 
     atomicAdd(&DENSITY[idx], encode_density(density));
 }
 
 fn visit_voxel(voxel: vec3<i32>, index: u32, v0: Vertex, v1: Vertex) {
+    let dim = vec3<u32>(TRACTOGRAPHY.volume);
+
+    if (!in_volume(voxel, dim)) { return; }
+
     let smoothing = TRACTOGRAPHY.smoothing;
 
     let radius_clamp = max(smoothing, RADIUS);
     let radius_ratio = pow(RADIUS / radius_clamp, 2.0);
 
-    let idx = block_index(vec3<u32>(voxel), vec3<u32>(TRACTOGRAPHY.volume));
+    let idx = block_index(vec3<u32>(voxel), dim);
 
     let p = vec3<f32>(voxel) + 0.5;
 

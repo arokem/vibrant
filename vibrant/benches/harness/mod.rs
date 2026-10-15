@@ -20,9 +20,9 @@ use vibrant::{
         gradient::GradientPipeline,
         lighting::LightingRenderer,
         line::{
-            crop::LineCropPipeline, cull::LineCullPipeline, deposit::LineDepositPipeline,
-            occupancy::LineOccupancyPipeline, populate::LinePopulatePipeline,
-            render::LineRenderPipeline, transform::LineTransformPipeline,
+            crop::LineCropPipeline, deposit::LineDepositPipeline, occupancy::LineOccupancyPipeline,
+            populate::LinePopulatePipeline, render::LineRenderPipeline,
+            transform::LineTransformPipeline,
         },
         present::{PresentPipeline, Presentation},
         util::clear::ClearPipeline,
@@ -74,7 +74,6 @@ pub struct Bench {
     pub line_transform: LineTransformPipeline,
     pub line_crop: LineCropPipeline,
     pub line_occupancy: LineOccupancyPipeline,
-    pub line_cull: LineCullPipeline,
     pub line_populate: LinePopulatePipeline,
     pub line_deposit: LineDepositPipeline,
     pub line_render: LineRenderPipeline,
@@ -144,7 +143,6 @@ pub fn setup() -> Bench {
         line_transform: LineTransformPipeline::new(&gpu),
         line_crop: LineCropPipeline::new(&gpu),
         line_occupancy: LineOccupancyPipeline::new(&gpu),
-        line_cull: LineCullPipeline::new(&gpu),
         line_populate: LinePopulatePipeline::new(&gpu),
         line_deposit: LineDepositPipeline::new(&gpu),
         line_render: LineRenderPipeline::new(&gpu),
@@ -209,7 +207,6 @@ impl Bench {
         self.line_crop.dispatch(cmd, asset, line);
         self.line_occupancy
             .dispatch(cmd, asset, &self.controller, line);
-        self.line_cull.dispatch(cmd, asset, &self.controller, line);
         self.line_populate
             .dispatch(cmd, asset, &self.controller, line);
 
