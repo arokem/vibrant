@@ -1,5 +1,4 @@
 pub mod crop;
-pub mod cull;
 pub mod deposit;
 pub mod occupancy;
 pub mod populate;
@@ -14,9 +13,8 @@ use crate::{
     controller::Controller,
     gpu::Gpu,
     renderer::line::{
-        crop::LineCropPipeline, cull::LineCullPipeline, deposit::LineDepositPipeline,
-        populate::LinePopulatePipeline, render::LineRenderPipeline,
-        transform::LineTransformPipeline,
+        crop::LineCropPipeline, deposit::LineDepositPipeline, populate::LinePopulatePipeline,
+        render::LineRenderPipeline, transform::LineTransformPipeline,
     },
     surface::Frame,
 };
@@ -25,7 +23,6 @@ pub struct LineRenderer {
     transform: LineTransformPipeline,
     crop: LineCropPipeline,
     occupancy: LineOccupancyPipeline,
-    cull: LineCullPipeline,
     deposit: LineDepositPipeline,
     populate: LinePopulatePipeline,
     render: LineRenderPipeline,
@@ -37,7 +34,6 @@ impl LineRenderer {
             transform: LineTransformPipeline::new(gpu),
             crop: LineCropPipeline::new(gpu),
             occupancy: LineOccupancyPipeline::new(gpu),
-            cull: LineCullPipeline::new(gpu),
             deposit: LineDepositPipeline::new(gpu),
             populate: LinePopulatePipeline::new(gpu),
             render: LineRenderPipeline::new(gpu),
@@ -45,7 +41,7 @@ impl LineRenderer {
     }
 
     /// Builds the tractography acceleration structure (transform/crop/occupancy/
-    /// cull/populate). The occupancy density pyramid it produces is also what
+    /// populate). The occupancy density pyramid it produces is also what
     /// [`Self::deposit`] samples to bake line density into the shared
     /// [`PhysicalVolume`](crate::asset::volume::PhysicalVolume).
     pub fn transfer(&self, cmd: &mut CommandEncoder, controller: &Controller, asset: &Asset) {
@@ -56,8 +52,6 @@ impl LineRenderer {
                 self.crop.dispatch(cmd, asset, line);
 
                 self.occupancy.dispatch(cmd, asset, controller, line);
-
-                self.cull.dispatch(cmd, asset, controller, line);
 
                 self.populate.dispatch(cmd, asset, controller, line);
             }
@@ -76,7 +70,8 @@ impl LineRenderer {
             return;
         };
 
-        self.deposit.dispatch(cmd, volume, line, &asset.tractography);
+        self.deposit
+            .dispatch(cmd, volume, line, &asset.tractography);
     }
 
     pub fn render(

@@ -1,5 +1,5 @@
-pub mod culling;
 pub mod occupancy;
+pub mod voxel_index;
 
 use std::{any::type_name, iter::zip};
 
@@ -16,7 +16,7 @@ use wgpu::{
 use crate::{
     asset::{
         colormap::{Colormap, ColormapSelection},
-        line::{culling::CullingBuffer, occupancy::OccupancyBuffer},
+        line::{occupancy::OccupancyBuffer, voxel_index::VoxelIndexBuffer},
         texture::{MipTexture3D, R32Float, R32Uint},
     },
     controller::settings::Settings,
@@ -109,7 +109,7 @@ pub struct LineBuffer {
     // rebuilt via `resize` when `settings.volume` / `settings.index_buffer_size`
     // change rather than when a new line file is loaded.
     occupancy: OccupancyBuffer,
-    culling: CullingBuffer,
+    voxel_index: VoxelIndexBuffer,
 
     colormap_view: TextureView,
 
@@ -118,7 +118,7 @@ pub struct LineBuffer {
     binding_render: BindGroup,
     // The single merged group for the ray-marcher (`render/trace.wgsl`). Kept
     // separate from `binding_render` because the voxelization compute pipelines
-    // bind `binding_render` next to `CullingBuffer::layout_write`, and folding
+    // bind `binding_render` next to `VoxelIndexBuffer::layout_write`, and folding
     // the acceleration-structure storage buffers in there would exceed
     // `max_storage_buffers_per_shader_stage` (10, the WebGPU/Chrome limit).
     // `None` only during `new` construction, before the first `trace_binding`.
@@ -346,7 +346,7 @@ impl LineBuffer {
         );
 
         let occupancy = OccupancyBuffer::new(gpu, volume);
-        let culling = CullingBuffer::new(gpu, volume, index_buffer_size);
+        let voxel_index = VoxelIndexBuffer::new(gpu, volume, index_buffer_size);
 
         let mut line = Self {
             global_settings,
@@ -365,7 +365,7 @@ impl LineBuffer {
             transform,
 
             occupancy,
-            culling,
+            voxel_index,
 
             colormap_view,
 
@@ -386,7 +386,7 @@ impl LineBuffer {
 
     /// Builds the merged ray-marcher bind group (`layout_trace`): line geometry
     /// buffers, colormap, and the tractography acceleration structure
-    /// (occupancy / culling). Used by `new` and `resize`.
+    /// (occupancy / voxel index). Used by `new` and `resize`.
     fn trace_binding(&self, gpu: &Gpu) -> BindGroup {
         gpu.device().create_bind_group(&BindGroupDescriptor {
             label: Some("LineTrace"),
@@ -435,11 +435,11 @@ impl LineBuffer {
                 vec![
                     BindGroupEntry {
                         binding: 17,
-                        resource: self.culling.offset().as_entire_binding(),
+                        resource: self.voxel_index.offset().as_entire_binding(),
                     },
                     BindGroupEntry {
                         binding: 18,
-                        resource: self.culling.index().as_entire_binding(),
+                        resource: self.voxel_index.index().as_entire_binding(),
                     },
                 ],
             ]
@@ -454,7 +454,7 @@ impl LineBuffer {
     /// structure) untouched.
     pub fn resize(&mut self, gpu: &Gpu, settings: &Settings) {
         self.occupancy = OccupancyBuffer::new(gpu, settings.volume);
-        self.culling = CullingBuffer::new(gpu, settings.volume, settings.index_buffer_size);
+        self.voxel_index = VoxelIndexBuffer::new(gpu, settings.volume, settings.index_buffer_size);
 
         self.binding_trace = Some(self.trace_binding(gpu));
     }
@@ -463,8 +463,8 @@ impl LineBuffer {
         &self.occupancy
     }
 
-    pub fn culling(&self) -> &CullingBuffer {
-        &self.culling
+    pub fn voxel_index(&self) -> &VoxelIndexBuffer {
+        &self.voxel_index
     }
 
     pub fn settings_global_mut(&mut self) -> &mut GlobalLineSettings {
@@ -767,13 +767,13 @@ impl LineBuffer {
 
     /// The single merged bind group for the tractography ray-marcher
     /// (`render/trace.wgsl`): everything from `layout_render` (0..8) plus the
-    /// occupancy textures (9..12) and the culling `OFFSET` / `INDEX` buffers
+    /// occupancy textures (9..12) and the voxel index `OFFSET` / `INDEX` buffers
     /// (17, 18), so the fragment shader needs only one group. Binding numbers
     /// 13..16 are intentionally left free (they used to hold the removed line
     /// occlusion volumes).
     ///
     /// Deliberately distinct from `layout_render`: the voxelization compute
-    /// pipelines bind `layout_render` alongside `CullingBuffer::layout_write`,
+    /// pipelines bind `layout_render` alongside `VoxelIndexBuffer::layout_write`,
     /// and folding these extra storage buffers in there would exceed
     /// `max_storage_buffers_per_shader_stage` (10) in the compute stage.
     pub fn layout_trace(gpu: &Gpu) -> BindGroupLayout {
@@ -810,12 +810,12 @@ impl LineBuffer {
                     MipTexture3D::<R32Float>::layout_entries(9),
                     MipTexture3D::<R32Uint>::layout_entries(11),
                     vec![
-                        // Culling - Offset
+                        // Voxel index - Offset
                         BindGroupLayoutEntry {
                             binding: 17,
                             ..buffer_read
                         },
-                        // Culling - Index
+                        // Voxel index - Index
                         BindGroupLayoutEntry {
                             binding: 18,
                             ..buffer_read

@@ -2,8 +2,8 @@ use wgpu::{CommandEncoder, ComputePassDescriptor, ComputePipeline};
 
 use crate::{
     asset::{
-        line::{culling::CullingBuffer, LineBuffer},
-        texture::{MipTexture3D, R32Float, R32Uint},
+        line::{voxel_index::VoxelIndexBuffer, LineBuffer},
+        texture::{MipTexture3D, R32Uint},
         tractography::Tractography,
         Asset,
     },
@@ -22,8 +22,7 @@ pub struct LinePopulatePipeline {
 impl LinePopulatePipeline {
     pub fn new(gpu: &Gpu) -> Self {
         let layout = &gpu.pipeline_layout(&[
-            &CullingBuffer::layout_write(gpu),
-            &MipTexture3D::<R32Float>::layout(gpu),
+            &VoxelIndexBuffer::layout_write(gpu),
             &LineBuffer::layout_render(gpu),
             &Tractography::layout(gpu),
         ]);
@@ -34,8 +33,7 @@ impl LinePopulatePipeline {
             scan: gpu.compute(
                 "Populate::Scan",
                 &gpu.pipeline_layout(&[
-                    &MipTexture3D::<R32Float>::layout_write(gpu),
-                    &CullingBuffer::layout_write(gpu),
+                    &VoxelIndexBuffer::layout_write(gpu),
                     &MipTexture3D::<R32Uint>::layout(gpu),
                 ]),
                 &gpu.shader(include_str!("scan.wgsl")),
@@ -67,7 +65,7 @@ impl LinePopulatePipeline {
     ) {
         let settings = controller.settings();
 
-        line.culling().clear(cmd);
+        line.voxel_index().clear(cmd);
         line.clear_offset(cmd);
 
         let mut pass = cmd.begin_compute_pass(&ComputePassDescriptor {
@@ -78,9 +76,8 @@ impl LinePopulatePipeline {
         let n = line.occupancy().resolution().div_ceil(4);
 
         pass.set_pipeline(&self.scan);
-        pass.set_bind_group(0, line.culling().pyramid().binding_write(), &[]);
-        pass.set_bind_group(1, line.culling().binding_write(), &[]);
-        pass.set_bind_group(2, line.occupancy().count().binding(), &[]);
+        pass.set_bind_group(0, line.voxel_index().binding_write(), &[]);
+        pass.set_bind_group(1, line.occupancy().count().binding(), &[]);
         pass.dispatch_workgroups(n, n, n);
 
         pass.set_pipeline(match settings.voxelization {
@@ -89,10 +86,9 @@ impl LinePopulatePipeline {
             LineVoxelizationMode::Tube => &self.populate_tube,
         });
 
-        pass.set_bind_group(0, line.culling().binding_write(), &[]);
-        pass.set_bind_group(1, line.culling().pyramid().binding(), &[]);
-        pass.set_bind_group(2, line.binding_render(), &[]);
-        pass.set_bind_group(3, asset.tractography.binding(), &[]);
+        pass.set_bind_group(0, line.voxel_index().binding_write(), &[]);
+        pass.set_bind_group(1, line.binding_render(), &[]);
+        pass.set_bind_group(2, asset.tractography.binding(), &[]);
         pass.dispatch_workgroups(settings.workgroups, 1, 1);
     }
 }

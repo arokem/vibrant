@@ -202,7 +202,7 @@ impl Asset {
         // whole `Frame` in `Surface::maybe_resize`). Also grow the index
         // buffer when the last voxelization reported it overflowed.
         if let Some(line) = &mut self.line {
-            let required = line.culling().required_index_size();
+            let required = line.voxel_index().required_index_size();
             if required > controller.settings().index_buffer_size {
                 controller.settings_mut().index_buffer_size = required.next_power_of_two();
             }
@@ -218,9 +218,9 @@ impl Asset {
                 self.changed = true;
             } else {
                 // Only kick off a fresh readback on the path that isn't about
-                // to tear down this CullingBuffer, mirroring the old guard in
+                // to tear down this VoxelIndexBuffer, mirroring the old guard in
                 // `Surface::maybe_resize`.
-                line.culling().refresh_required_index_size(gpu);
+                line.voxel_index().refresh_required_index_size(gpu);
             }
         }
 

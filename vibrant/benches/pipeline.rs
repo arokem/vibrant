@@ -52,10 +52,6 @@ fn bench_pipeline(c: &mut Criterion) {
         })
     });
 
-    group.bench_function("line/cull", |t| {
-        t.iter(|| b.time_pass(|cmd| b.line_cull.dispatch(cmd, &b.asset, &b.controller, b.line())))
-    });
-
     group.bench_function("line/populate", |t| {
         t.iter(|| {
             b.time_pass(|cmd| {
