@@ -38,13 +38,13 @@ fn vertex(@builtin(vertex_index) index: u32) -> Fragment {
 
 @fragment
 fn fragment(fragment: Fragment) -> @location(0) vec4<f32> {
+    // View space: an imprecise `w` only slides a point along its own ray.
     let near = unproject(vec3<f32>(fragment.uv, 0.0));
     let far = unproject(vec3<f32>(fragment.uv, 1.0));
 
-    let direction_world = normalize(far - near);
-
-    let origin = (TRANSFORM * vec4<f32>(near, 1.0)).xyz;
-    let direction = (TRANSFORM * vec4<f32>(direction_world, 0.0)).xyz;
+    let camera = TRANSFORM * ENVIRONMENT.camera.transform;
+    let origin = (camera * vec4<f32>(near, 1.0)).xyz;
+    let direction = (camera * vec4<f32>(normalize(far - near), 0.0)).xyz;
 
     let hit = intersectAABB(origin, direction);
 

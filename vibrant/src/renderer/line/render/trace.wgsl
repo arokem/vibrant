@@ -67,13 +67,17 @@ fn fragment(fragment: Fragment) -> FragmentOut {
     DIM_INV = 1.0 / DIM;
     RADIUS = TRACTOGRAPHY.radius * DIM_INV;
 
+    // View space: an imprecise `w` only slides a point along its own ray.
     let near = unproject(vec3<f32>(fragment.uv, 0.0));
     let far = unproject(vec3<f32>(fragment.uv, 1.0));
 
-    RAY_LENGTH = length(far - near);
+    let camera = TRANSFORM * ENVIRONMENT.camera.transform;
+    let origin = (camera * vec4<f32>(near, 1.0)).xyz;
+    let segment = (camera * vec4<f32>(far - near, 0.0)).xyz;
 
-    let origin = near;
-    let direction = normalize(far - near);
+    RAY_LENGTH = length(segment);
+
+    let direction = segment / RAY_LENGTH;
 
     let color = raymarch(origin, direction);
 
@@ -175,7 +179,7 @@ fn minimum(v: vec3<f32>) -> f32 {
 }
 
 fn unproject(v: vec3<f32>) -> vec3<f32> {
-    let t = TRANSFORM * ENVIRONMENT.camera.projection_inverse * vec4<f32>(v, 1.0);
+    let t = ENVIRONMENT.camera.projection_inverse * vec4<f32>(v, 1.0);
     return t.xyz / t.w;
 }
 

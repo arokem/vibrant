@@ -14,6 +14,8 @@ use crate::{controller::Controller, gpu::Gpu};
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct CameraUniform {
+    // View -> world. Kept separate from the clip -> view inverse so
+    // unprojection stays precise at narrow fields of view.
     transform: Mat4,
     projection_inverse: Mat4,
 }

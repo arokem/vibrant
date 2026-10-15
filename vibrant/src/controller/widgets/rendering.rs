@@ -110,11 +110,12 @@ impl RenderingWidget {
             |ui| {
                 Grid::new("CameraSettings").num_columns(2).show(ui, |ui| {
                     ui.label("Field of View").on_hover_text(
-                        "Camera field of view. Low values flatten perspective \
-                         (closer to an orthographic view); high values \
-                         exaggerate depth.",
+                        "Camera field of view. Low values flatten perspective; \
+                         zero is orthographic. High values exaggerate depth.",
                     );
-                    ui.slider(&mut camera.fov, 0.2..=1.0).track(self);
+                    let mut fov = camera.fov();
+                    ui.slider(&mut fov, 0.0..=1.0).track(self);
+                    camera.set_fov(fov);
                     ui.end_row();
 
                     ui.label("HDR Display").on_hover_text(

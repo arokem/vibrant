@@ -1,9 +1,10 @@
 struct Hit {
     distance: f32,
-    index: u32
+    index: u32,
+    position: vec3<f32>,
 }
 
-var<private> HIT: Hit = Hit(0.0, U32_MAX);
+var<private> HIT: Hit = Hit(0.0, U32_MAX, vec3<f32>());
 
 fn visit(
     voxel: vec3<u32>,
@@ -20,7 +21,11 @@ fn visit(
 
     let offset = OFFSET[block_index(voxel, textureDimensions(DENSITY))] - count;
 
-    HIT = Hit(distance, U32_MAX);
+    HIT = Hit(distance, U32_MAX, vec3<f32>());
+
+    // Intersect from the voxel entry, not the ray origin: the origin can be
+    // far away (narrow fov, orthographic), which wrecks the capsule quadratic.
+    let base = distance - increment;
 
     for (var i = 0u; i < count; i++) {
         let index = INDEX[offset + i];
@@ -28,10 +33,11 @@ fn visit(
         let v0 = LINE_VERTEX[index + 0];
         let v1 = LINE_VERTEX[index + 1];
 
-        let intersection = capsule_intersection(origin, direction, v0.xyz, v1.xyz, RADIUS);
+        let local = capsule_intersection(position, direction, v0.xyz, v1.xyz, RADIUS);
+        let intersection = base + local;
 
         if (intersection < HIT.distance) {
-            HIT = Hit(intersection, index);
+            HIT = Hit(intersection, index, position + direction * local);
         }
     }
 
@@ -56,7 +62,5 @@ fn result(origin: vec3<f32>, direction: vec3<f32>) -> vec4<f32> {
 
     let settings = LINE_SETTINGS[LINE_MATERIAL[HIT.index]];
 
-    let position = origin + direction * HIT.distance;
-
-    return shade(v0, v1, v0s, v1s, RADIUS, position, settings);
+    return shade(v0, v1, v0s, v1s, RADIUS, HIT.position, settings);
 }
