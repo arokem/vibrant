@@ -7,7 +7,9 @@ use super::state::ControllerState;
 #[derive(Debug)]
 pub struct Camera {
     pub aspect: f32,
-    pub fov: f32,
+    fov: f32,
+    // Last non-zero fov; relates `distance` to the framing at the pivot.
+    framing: f32,
     pub yaw: f32,
     pub pitch: f32,
     pub distance: f32,
@@ -32,6 +34,7 @@ impl Camera {
             distance: 300.0,
             pan: Vec3::ZERO,
             fov: 0.5,
+            framing: 0.5,
             near: 1.0,
             far: 10000.0,
             changed: false,
@@ -84,10 +87,40 @@ impl Camera {
         self.zoom(-10.0 * state.scroll.y);
     }
 
+    pub fn fov(&self) -> f32 {
+        self.fov
+    }
+
+    pub fn orthographic(&self) -> bool {
+        self.fov <= 0.0
+    }
+
+    /// Change the field of view, dollying so the pivot plane keeps its framing.
+    /// A fov of zero switches to an orthographic projection.
+    pub fn set_fov(&mut self, fov: f32) {
+        if fov != self.fov {
+            self.changed = true;
+            if fov > 0.0 {
+                self.distance *= (0.5 * self.framing).tan() / (0.5 * fov).tan();
+                self.framing = fov;
+            }
+            self.fov = fov;
+        }
+    }
+
+    /// View space -> clip space. The orthographic view matches the perspective
+    /// framing at the pivot; its near plane sits behind the camera so zooming
+    /// in never clips. `far` grows with `distance`, which gets large as the fov
+    /// approaches zero.
     pub fn projection(&self) -> Mat4 {
-        Mat4::perspective_lh(self.fov, self.aspect, self.near, self.far)
-            * self.view()
-            * Mat4::from_diagonal(Vec4::new(-1.0, 1.0, 1.0, 1.0)) // Flip Left/Right
+        let far = self.far + self.distance;
+        if self.orthographic() {
+            let h = self.distance * (0.5 * self.framing).tan();
+            let w = h * self.aspect;
+            Mat4::orthographic_lh(-w, w, -h, h, -far, far)
+        } else {
+            Mat4::perspective_lh(self.fov, self.aspect, self.near, far)
+        }
     }
 
     pub fn rotation(&self) -> Quat {
@@ -99,15 +132,16 @@ impl Camera {
             * Mat4::from_translation(self.pan)
     }
 
+    /// View space -> world space.
     pub fn transform(&self) -> Mat4 {
-        self.view().inverse()
+        (self.view() * Mat4::from_diagonal(Vec4::new(-1.0, 1.0, 1.0, 1.0))).inverse() // Flip Left/Right
     }
 
     pub fn zoom(&mut self, zoom: f32) {
         if zoom != 0.0 {
             self.changed = true;
         }
-        self.distance = (self.distance + zoom).clamp(1.0, 10000.0);
+        self.distance = (self.distance + zoom).max(1.0);
     }
 
     pub fn rotate(&mut self, yaw: f32, pitch: f32) {
