@@ -7,11 +7,15 @@
 </p>
 
 <p align="center">
-  <strong>Real-Time Cinematic Visualization of Neuroanatomy and Tractography — in your browser.</strong>
+  <strong>Real-Time Cinematic Visualization of Neuroanatomy and Tractography</strong>
 </p>
 
 <p align="center">
   <a href="https://as-the-crow-flies.github.io/vibrant/">Launch the web app</a>
+</p>
+
+<p align="center">
+  (Use Google Chrome)
 </p>
 
 ---
@@ -31,7 +35,30 @@ VIBRANT is a tool for visualizing tractography and brain anatomy together in 3D.
 
 ---
 
-## What you can do with it
+## Run the App
+
+### Web App (recommended)
+
+VIBRANT runs entirely in the browser: **https://as-the-crow-flies.github.io/vibrant/**
+
+Currently, the web app only runs in Google Chrome.
+
+### Running on the desktop
+
+VIBRANT also runs natively on Windows, macOS, and Linux. It is easy to build it yourself using the Rust Toolchain.
+
+1. [Install Rust](https://rustup.rs/)
+2. Build and run:
+
+    ```bash
+    git clone git@github.com:as-the-crow-flies/vibrant.git
+    cd vibrant
+    cargo run
+    ```
+
+---
+
+## What you can do with VIBRANT
 
 - **Bring a whole study into one scene.** Load any number of volumes and bundles at once — anatomical scans, ROIs, segmentations, tractograms — and view them together under consistent lighting.
 - **Make bundles readable.** Colour streamlines by tangent direction, per bundle, or by a track scalar such as FA, and let the cinematic lighting reveal the 3D structure.
@@ -72,31 +99,6 @@ Two render modes control how bundles sit against the volume: **Combined** lights
 Explore interior structure with orthogonal (axial / sagittal / coronal) clip planes and a spherical cutaway. Slicing can apply to the volumes alone or to the streamlines as well.
 
 Any NIfTI whose filename contains `mask` is loaded as a mask and can be assigned to one or more volumes to restrict them to a region of interest. Both binary and signed-distance masks are supported, and masks can be inverted.
-
----
-
-## Getting started
-
-### Web App (recommended)
-
-VIBRANT runs entirely in the browser — get started by clicking the link:
-
-**https://as-the-crow-flies.github.io/vibrant/**
-
-The web app needs a browser with **WebGPU** support (recent Chrome, Edge, or Safari; Firefox with WebGPU enabled).
-
-### Running on the desktop
-
-VIBRANT also runs natively on Windows, macOS, and Linux. It is easy to build it yourself using the Rust Toolchain.
-
-1. Install Rust: <https://rustup.rs/>
-2. Build and run:
-
-   ```bash
-   git clone git@github.com:as-the-crow-flies/vibrant.git
-   cd vibrant
-   cargo run --release
-   ```
 
 ---
 
